@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class RegistryAdapterSettings(BaseSettings):
-    """Registry transport settings. Read by the factory and the four computations.
+    """Registry transport settings. Read by the factory and the computations.
 
     Env prefix is ``registry_adapters_``. Celery workers and the staff portal
     set the same variables; they do not open a registry database themselves.
@@ -32,6 +32,8 @@ class RegistryAdapterSettings(BaseSettings):
     household_reg_type: str = "Household"
     farmer_reg_record_type: str = "Farmer"
     household_reg_record_type: str = "Household"
+    disability_reg_type: str = "PersonWithDisability"
+    disability_reg_record_type: str = "spdci-extensions-dci:PersonwithDisability"
 
     @classmethod
     def get_config(cls) -> "RegistryAdapterSettings":

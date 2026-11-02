@@ -1,6 +1,13 @@
 from openg2p_bg_task_models.errors import BGTaskErrorCodes, BGTaskException
 
-from ..computations import FarmerDB, FarmerDCI, HouseholdDB, HouseholdDCI
+from ..computations import (
+    DisabilityDB,
+    DisabilityDCI,
+    FarmerDB,
+    FarmerDCI,
+    HouseholdDB,
+    HouseholdDCI,
+)
 from ..config import RegistryAdapterSettings
 from ..interface import RegistryInterface
 from ..models import G2PRegistryType
@@ -10,6 +17,8 @@ _CLASSES = {
     (G2PRegistryType.FARMER.value, "dci"): FarmerDCI,
     (G2PRegistryType.HOUSEHOLD.value, "db"): HouseholdDB,
     (G2PRegistryType.HOUSEHOLD.value, "dci"): HouseholdDCI,
+    (G2PRegistryType.DISABILITY.value, "db"): DisabilityDB,
+    (G2PRegistryType.DISABILITY.value, "dci"): DisabilityDCI,
 }
 
 
