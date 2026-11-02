@@ -34,7 +34,7 @@ maintainers:
 dependencies:
   - name: openg2p-pbms-platform
     alias: pbms
-    version: 0.0.0-develop.18
+    version: 0.0.0-develop.22
     repository: https://openg2p.github.io/openg2p-helm
 
 annotations:

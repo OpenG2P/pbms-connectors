@@ -10,6 +10,9 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 
 from ..models import (
+    BeneficiaryListSummaryDisability as BeneficiaryListSummaryDisabilityModel,
+)
+from ..models import (
     BeneficiaryListSummaryFarmer as BeneficiaryListSummaryFarmerModel,
 )
 from ..models import (
@@ -17,11 +20,14 @@ from ..models import (
 )
 from ..schema import (
     BeneficiaryListSummary,
+    BeneficiaryListSummaryDisability,
+    BeneficiaryListSummaryDisabilityPayload,
     BeneficiaryListSummaryFarmer,
     BeneficiaryListSummaryFarmerPayload,
     BeneficiaryListSummaryHousehold,
     BeneficiaryListSummaryHouseholdPayload,
 )
+from ._dci_records import age_from_birth_date
 
 
 def entitlement_stats(entitlements: dict[Any, list[float]]) -> dict[str, dict]:
@@ -79,6 +85,53 @@ def _ids_from_details(details: list[BeneficiaryListDetails]) -> list[list[str]]:
     return batches
 
 
+def gendered_entitlement_values(adapter, beneficiary_list_id, bg_task_session) -> dict:
+    """Entitlement stats overall and split by the registrant's gender."""
+    details = (
+        bg_task_session.query(BeneficiaryListDetails)
+        .filter_by(beneficiary_list_id=beneficiary_list_id)
+        .all()
+    )
+    by_id = {}
+    for registrant_ids in _ids_from_details(details):
+        for person in adapter.fetch_by_ids(registrant_ids):
+            by_id[str(adapter.registrant_id_of(person))] = person
+
+    entitlements: dict = {}
+    entitlements_male: dict = {}
+    entitlements_female: dict = {}
+    for detail in details:
+        for registrant in detail.registrant_details or []:
+            parsed = RegistrantDetails(**registrant)
+            person = by_id.get(str(parsed.registrant_id))
+            gender = (getattr(person, "gender", None) or "").lower() if person else ""
+            for benefit_code_id, value in (parsed.entitlement or {}).items():
+                entitlements.setdefault(benefit_code_id, []).append(value)
+                if gender == Gender.MALE.value:
+                    entitlements_male.setdefault(benefit_code_id, []).append(value)
+                elif gender == Gender.FEMALE.value:
+                    entitlements_female.setdefault(benefit_code_id, []).append(value)
+
+    all_stats = entitlement_stats(entitlements)
+    male_stats = entitlement_stats(entitlements_male)
+    female_stats = entitlement_stats(entitlements_female)
+    return {
+        "total_disbursement_quantity": dict(all_stats["total"]),
+        "average_entitlement_per_person": dict(all_stats["average"]),
+        "entitlement_amount_q1": dict(all_stats["q1"]),
+        "entitlement_amount_q2": dict(all_stats["q2"]),
+        "entitlement_amount_q3": dict(all_stats["q3"]),
+        "average_entitlement_male": dict(male_stats["average"]),
+        "entitlement_amount_male_q1": dict(male_stats["q1"]),
+        "entitlement_amount_male_q2": dict(male_stats["q2"]),
+        "entitlement_amount_male_q3": dict(male_stats["q3"]),
+        "average_entitlement_female": dict(female_stats["average"]),
+        "entitlement_amount_female_q1": dict(female_stats["q1"]),
+        "entitlement_amount_female_q2": dict(female_stats["q2"]),
+        "entitlement_amount_female_q3": dict(female_stats["q3"]),
+    }
+
+
 class FarmerSummaries:
     async def get_summary(
         self,
@@ -129,59 +182,14 @@ class FarmerSummaries:
     def compute_entitlement_statistics(
         self, beneficiary_list_id: str, bg_task_session: Session
     ):
-        details = (
-            bg_task_session.query(BeneficiaryListDetails)
-            .filter_by(beneficiary_list_id=beneficiary_list_id)
-            .all()
-        )
-        by_id = {}
-        for registrant_ids in _ids_from_details(details):
-            for farmer in self.fetch_by_ids(registrant_ids):
-                by_id[str(self.registrant_id_of(farmer))] = farmer
-
-        entitlements: dict = {}
-        entitlements_male: dict = {}
-        entitlements_female: dict = {}
-        for detail in details:
-            for registrant in detail.registrant_details or []:
-                parsed = RegistrantDetails(**registrant)
-                farmer = by_id.get(str(parsed.registrant_id))
-                gender = (
-                    (getattr(farmer, "gender", None) or "").lower() if farmer else ""
-                )
-                for benefit_code_id, value in (parsed.entitlement or {}).items():
-                    entitlements.setdefault(benefit_code_id, []).append(value)
-                    if gender == Gender.MALE.value:
-                        entitlements_male.setdefault(benefit_code_id, []).append(value)
-                    elif gender == Gender.FEMALE.value:
-                        entitlements_female.setdefault(benefit_code_id, []).append(
-                            value
-                        )
-
-        all_stats = entitlement_stats(entitlements)
-        male_stats = entitlement_stats(entitlements_male)
-        female_stats = entitlement_stats(entitlements_female)
+        values = gendered_entitlement_values(self, beneficiary_list_id, bg_task_session)
         bg_task_session.execute(
             update(BeneficiaryListSummaryFarmerModel)
             .where(
                 BeneficiaryListSummaryFarmerModel.beneficiary_list_id
                 == beneficiary_list_id
             )
-            .values(
-                total_disbursement_quantity=dict(all_stats["total"]),
-                average_entitlement_per_person=dict(all_stats["average"]),
-                entitlement_amount_q1=dict(all_stats["q1"]),
-                entitlement_amount_q2=dict(all_stats["q2"]),
-                entitlement_amount_q3=dict(all_stats["q3"]),
-                average_entitlement_male=dict(male_stats["average"]),
-                entitlement_amount_male_q1=dict(male_stats["q1"]),
-                entitlement_amount_male_q2=dict(male_stats["q2"]),
-                entitlement_amount_male_q3=dict(male_stats["q3"]),
-                average_entitlement_female=dict(female_stats["average"]),
-                entitlement_amount_female_q1=dict(female_stats["q1"]),
-                entitlement_amount_female_q2=dict(female_stats["q2"]),
-                entitlement_amount_female_q3=dict(female_stats["q3"]),
-            )
+            .values(**values)
         )
 
     def _farmer_payload(self, row) -> BeneficiaryListSummaryFarmerPayload:
@@ -361,5 +369,123 @@ class HouseholdSummaries:
                 entitlement_amount_q1=row.entitlement_amount_q1,
                 entitlement_amount_q2=row.entitlement_amount_q2,
                 entitlement_amount_q3=row.entitlement_amount_q3,
+            ),
+        )
+
+
+class DisabilitySummaries:
+    async def get_summary(
+        self,
+        beneficiary_list_id: str,
+        bg_task_session: AsyncSession,
+        formated: bool = False,
+    ) -> BeneficiaryListSummaryDisabilityPayload:
+        result = await bg_task_session.execute(
+            select(BeneficiaryListSummaryDisabilityModel).where(
+                BeneficiaryListSummaryDisabilityModel.beneficiary_list_id
+                == beneficiary_list_id
+            )
+        )
+        return self._disability_payload(result.scalars().first())
+
+    def get_summary_sync(
+        self, beneficiary_list_id: str, bg_task_session: Session
+    ) -> BeneficiaryListSummaryDisabilityPayload:
+        row = (
+            bg_task_session.query(BeneficiaryListSummaryDisabilityModel)
+            .filter_by(beneficiary_list_id=beneficiary_list_id)
+            .first()
+        )
+        return self._disability_payload(row)
+
+    def compute_eligibility_statistics(
+        self,
+        beneficiary_list_details: list[BeneficiaryListDetails],
+        base_summary,
+        bg_task_session: Session,
+    ):
+        summary = BeneficiaryListSummaryDisabilityModel(
+            program_id=base_summary.program_id,
+            program_mnemonic=base_summary.program_mnemonic,
+            target_registry=base_summary.target_registry,
+            beneficiary_list_id=base_summary.beneficiary_list_id,
+            number_of_registrants=base_summary.number_of_registrants,
+            date_created=base_summary.date_created,
+        )
+        ages = []
+        unmet = []
+        for registrant_ids in _ids_from_details(beneficiary_list_details):
+            for person in self.fetch_by_ids(registrant_ids):
+                age = getattr(person, "estimated_age", None)
+                if age is None:
+                    age = age_from_birth_date(getattr(person, "birth_date", None))
+                if age is not None:
+                    ages.append(age)
+                count = getattr(person, "unmet_support_needs_count", None)
+                if count is not None:
+                    unmet.append(count)
+        apply_quartiles(summary, "estimated_age", ages)
+        apply_quartiles(summary, "unmet_support_needs_count", unmet)
+        bg_task_session.add(summary)
+
+    def compute_entitlement_statistics(
+        self, beneficiary_list_id: str, bg_task_session: Session
+    ):
+        values = gendered_entitlement_values(self, beneficiary_list_id, bg_task_session)
+        bg_task_session.execute(
+            update(BeneficiaryListSummaryDisabilityModel)
+            .where(
+                BeneficiaryListSummaryDisabilityModel.beneficiary_list_id
+                == beneficiary_list_id
+            )
+            .values(**values)
+        )
+
+    def _disability_payload(self, row) -> BeneficiaryListSummaryDisabilityPayload:
+        def fmt(value, units):
+            return f"{value} {units}" if value is not None else None
+
+        age_units = row.estimated_age_units
+        unmet_units = row.unmet_support_needs_count_units
+        return BeneficiaryListSummaryDisabilityPayload(
+            beneficiary_list_summary=BeneficiaryListSummary(
+                id=row.id,
+                program_id=row.program_id,
+                program_mnemonic=row.program_mnemonic,
+                target_registry=row.target_registry,
+                beneficiary_list_id=row.beneficiary_list_id,
+                number_of_registrants=row.number_of_registrants,
+                date_created=row.date_created,
+                total_disbursement_quantity=row.total_disbursement_quantity,
+                average_entitlement_per_registrant=row.average_entitlement_per_person,
+            ),
+            registry_summary=BeneficiaryListSummaryDisability(
+                estimated_age_mean=fmt(row.estimated_age_mean, age_units),
+                estimated_age_q1=fmt(row.estimated_age_q1, age_units),
+                estimated_age_q2=fmt(row.estimated_age_q2, age_units),
+                estimated_age_q3=fmt(row.estimated_age_q3, age_units),
+                unmet_support_needs_count_mean=fmt(
+                    row.unmet_support_needs_count_mean, unmet_units
+                ),
+                unmet_support_needs_count_q1=fmt(
+                    row.unmet_support_needs_count_q1, unmet_units
+                ),
+                unmet_support_needs_count_q2=fmt(
+                    row.unmet_support_needs_count_q2, unmet_units
+                ),
+                unmet_support_needs_count_q3=fmt(
+                    row.unmet_support_needs_count_q3, unmet_units
+                ),
+                average_entitlement_female=row.average_entitlement_female,
+                average_entitlement_male=row.average_entitlement_male,
+                entitlement_amount_q3=row.entitlement_amount_q3,
+                entitlement_amount_q2=row.entitlement_amount_q2,
+                entitlement_amount_q1=row.entitlement_amount_q1,
+                entitlement_amount_male_q3=row.entitlement_amount_male_q3,
+                entitlement_amount_male_q2=row.entitlement_amount_male_q2,
+                entitlement_amount_male_q1=row.entitlement_amount_male_q1,
+                entitlement_amount_female_q3=row.entitlement_amount_female_q3,
+                entitlement_amount_female_q2=row.entitlement_amount_female_q2,
+                entitlement_amount_female_q1=row.entitlement_amount_female_q1,
             ),
         )

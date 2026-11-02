@@ -9,6 +9,39 @@
 # Worker and beat share openg2p-pbms-celery. CELERY_APP on each deployment,
 # set by the platform chart, picks the process. The beneficiary API stays on
 # the platform image.
+#
+# Everything registry-specific lives here, not in the platform chart: the
+# registry adapters ship in this repo's images. The Celery worker and the staff
+# API read the same REGISTRY_ADAPTERS_* settings, so both get the same env.
+#
+# Each register has a connector and a connection string; the adapters decode
+# the string according to the connector:
+#   db:  postgresql://user:pass@host:5432/dbname (percent-encode the password)
+#   dci: full search URL, http(s)://host[:port]/dci/sync/search?reg_type=..&reg_record_type=..&timeout=30&ssl_verify=true
+#        (all query params optional; reg_type/reg_record_type default per register)
+# An empty connection string leaves the register unconfigured.
+# A new register needs an entry here, two env lines in registryAdapterEnv and a
+# block in questions.own.yaml (checked by test/test_register_config.py).
+
+global:
+  registers:
+    farmer:
+      connector: db
+      connectionString: 'postgresql://registry_user:CHANGE_ME@{{ .Values.global.postgresqlHost }}:5432/registry'
+    household:
+      connector: db
+      connectionString: 'postgresql://registry_user:CHANGE_ME@{{ .Values.global.postgresqlHost }}:5432/registry'
+    disability:
+      connector: db
+      connectionString: 'postgresql://registry_user:CHANGE_ME@{{ .Values.global.postgresqlHost }}:5432/registry'
+
+registryAdapterEnv: &registryAdapterEnv
+  REGISTRY_ADAPTERS_FARMER_CONNECTOR: '{{ .Values.global.registers.farmer.connector }}'
+  REGISTRY_ADAPTERS_FARMER_CONNECTION_STRING: '{{ tpl .Values.global.registers.farmer.connectionString $ }}'
+  REGISTRY_ADAPTERS_HOUSEHOLD_CONNECTOR: '{{ .Values.global.registers.household.connector }}'
+  REGISTRY_ADAPTERS_HOUSEHOLD_CONNECTION_STRING: '{{ tpl .Values.global.registers.household.connectionString $ }}'
+  REGISTRY_ADAPTERS_DISABILITY_CONNECTOR: '{{ .Values.global.registers.disability.connector }}'
+  REGISTRY_ADAPTERS_DISABILITY_CONNECTION_STRING: '{{ tpl .Values.global.registers.disability.connectionString $ }}'
 
 pbms:
   odoo:
@@ -19,6 +52,7 @@ pbms:
     image:
       repository: openg2p/openg2p-pbms-celery
       tag: 0.0.0-develop
+    envVars: *registryAdapterEnv
   beatProducers:
     image:
       repository: openg2p/openg2p-pbms-celery
@@ -27,3 +61,4 @@ pbms:
     image:
       repository: openg2p/openg2p-pbms-staff-api
       tag: 0.0.0-develop
+    envVars: *registryAdapterEnv

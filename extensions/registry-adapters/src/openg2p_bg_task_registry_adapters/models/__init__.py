@@ -1,5 +1,7 @@
+from .beneficiary_list_summary_disability import BeneficiaryListSummaryDisability
 from .beneficiary_list_summary_farmer import BeneficiaryListSummaryFarmer
 from .beneficiary_list_summary_household import BeneficiaryListSummaryHousehold
 from .enum import G2PRegistryType
 from .register_household import G2PRegisterHousehold
+from .registry_disability import G2PDisabilityRegistry
 from .registry_farmer import G2PFarmerRegistry

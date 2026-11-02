@@ -6,15 +6,20 @@ from openg2p_bg_task_models.schemas import BeneficiarySearchResponsePayload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
+from ..connection import RegistryConnection
 from ..schema import BeneficiaryListSummaryPayload
 
 
 class RegistryInterface(ABC):
     """Transport-free registry contract.
 
-    Implementations open their own registry session or HTTP client. Callers
-    pass ``pbms_domain`` strings and beneficiary-list rows, never SQL.
+    Implementations open their own registry session or HTTP client from the
+    register's ``connection``. Callers pass ``pbms_domain`` strings and
+    beneficiary-list rows, never SQL.
     """
+
+    def __init__(self, connection: RegistryConnection):
+        self.connection = connection
 
     @abstractmethod
     async def get_summary(

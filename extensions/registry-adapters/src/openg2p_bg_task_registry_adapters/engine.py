@@ -3,23 +3,21 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
-from .config import RegistryAdapterSettings
+from .connection import RegistryConnection
 
-_sync_engine = None
-_async_engine = None
-
-
-def sync_session():
-    global _sync_engine
-    if _sync_engine is None:
-        settings = RegistryAdapterSettings.get_config()
-        _sync_engine = create_engine(settings.sync_url(), poolclass=NullPool)
-    return sessionmaker(bind=_sync_engine, expire_on_commit=False)()
+_sync_engines = {}
+_async_engines = {}
 
 
-def async_session():
-    global _async_engine
-    if _async_engine is None:
-        settings = RegistryAdapterSettings.get_config()
-        _async_engine = create_async_engine(settings.async_url(), poolclass=NullPool)
-    return async_sessionmaker(bind=_async_engine, expire_on_commit=False)()
+def sync_session(connection: RegistryConnection):
+    url = connection.sync_url()
+    if url not in _sync_engines:
+        _sync_engines[url] = create_engine(url, poolclass=NullPool)
+    return sessionmaker(bind=_sync_engines[url], expire_on_commit=False)()
+
+
+def async_session(connection: RegistryConnection):
+    url = connection.async_url()
+    if url not in _async_engines:
+        _async_engines[url] = create_async_engine(url, poolclass=NullPool)
+    return async_sessionmaker(bind=_async_engines[url], expire_on_commit=False)()

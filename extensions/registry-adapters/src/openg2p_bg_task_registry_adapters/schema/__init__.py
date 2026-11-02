@@ -2,6 +2,10 @@ from .beneficiary_list_summary import (
     BeneficiaryListSummary,
     BeneficiaryListSummaryPayload,
 )
+from .beneficiary_list_summary_disability import (
+    BeneficiaryListSummaryDisability,
+    BeneficiaryListSummaryDisabilityPayload,
+)
 from .beneficiary_list_summary_farmer import (
     BeneficiaryListSummaryFarmer,
     BeneficiaryListSummaryFarmerPayload,
@@ -12,4 +16,5 @@ from .beneficiary_list_summary_household import (
 )
 from .register_household import G2PRegisterHouseholdPayload
 from .registry import G2PRegistryPayload
+from .registry_disability import G2PDisabilityRegistryPayload
 from .registry_farmer import G2PFarmerRegistryPayload
