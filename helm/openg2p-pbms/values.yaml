@@ -9,6 +9,58 @@
 # Worker and beat share openg2p-pbms-celery. CELERY_APP on each deployment,
 # set by the platform chart, picks the process. The beneficiary API stays on
 # the platform image.
+#
+# Everything registry-specific lives here, not in the platform chart: the
+# registry adapters ship in this repo's images. The Celery worker and the staff
+# API read the same REGISTRY_ADAPTERS_* settings, so both get the same env.
+
+global:
+  # db reads the registry database. dci calls the registry partner API.
+  registryConnector: db
+
+  # Registry database, used when registryConnector is db. Defaults match a
+  # registry installed with release name 'registry'.
+  registryDB: registry
+  registryDBUser: registry_user
+  registryDBSecret: registry
+  registryDBUserPasswordKey: registry-db-user
+
+  # Registry partner API, used when registryConnector is dci.
+  registryPartnerApiUrl: http://registry-partner-api
+  registryPartnerApiTimeout: 30
+  registryPartnerApiSslVerify: true
+
+  # DCI reg_type is the register mnemonic on the registry; reg_record_type is
+  # the record type sent with the search.
+  farmerRegType: Farmer
+  farmerRegRecordType: Farmer
+  householdRegType: Household
+  householdRegRecordType: Household
+  disabilityRegType: PersonWithDisability
+  disabilityRegRecordType: spdci-extensions-dci:PersonwithDisability
+
+registryAdapterEnv: &registryAdapterEnv
+  REGISTRY_ADAPTERS_CONNECTOR: '{{ tpl .Values.global.registryConnector $ }}'
+  REGISTRY_ADAPTERS_DB_DRIVER: postgresql
+  REGISTRY_ADAPTERS_DB_HOSTNAME: '{{ tpl .Values.global.postgresqlHost $ }}'
+  REGISTRY_ADAPTERS_DB_PORT: 5432
+  REGISTRY_ADAPTERS_DB_DBNAME: '{{ tpl .Values.global.registryDB $ }}'
+  REGISTRY_ADAPTERS_DB_USERNAME: '{{ tpl .Values.global.registryDBUser $ }}'
+  REGISTRY_ADAPTERS_PARTNER_API_URL: '{{ tpl .Values.global.registryPartnerApiUrl $ }}'
+  REGISTRY_ADAPTERS_PARTNER_API_TIMEOUT: '{{ .Values.global.registryPartnerApiTimeout }}'
+  REGISTRY_ADAPTERS_PARTNER_API_SSL_VERIFY: '{{ .Values.global.registryPartnerApiSslVerify }}'
+  REGISTRY_ADAPTERS_FARMER_REG_TYPE: '{{ tpl .Values.global.farmerRegType $ }}'
+  REGISTRY_ADAPTERS_FARMER_REG_RECORD_TYPE: '{{ tpl .Values.global.farmerRegRecordType $ }}'
+  REGISTRY_ADAPTERS_HOUSEHOLD_REG_TYPE: '{{ tpl .Values.global.householdRegType $ }}'
+  REGISTRY_ADAPTERS_HOUSEHOLD_REG_RECORD_TYPE: '{{ tpl .Values.global.householdRegRecordType $ }}'
+  REGISTRY_ADAPTERS_DISABILITY_REG_TYPE: '{{ tpl .Values.global.disabilityRegType $ }}'
+  REGISTRY_ADAPTERS_DISABILITY_REG_RECORD_TYPE: '{{ tpl .Values.global.disabilityRegRecordType $ }}'
+
+registryAdapterEnvFrom: &registryAdapterEnvFrom
+  REGISTRY_ADAPTERS_DB_PASSWORD:
+    secretKeyRef:
+      name: '{{ tpl .Values.global.registryDBSecret $ }}'
+      key: '{{ tpl .Values.global.registryDBUserPasswordKey $ }}'
 
 pbms:
   odoo:
@@ -19,6 +71,8 @@ pbms:
     image:
       repository: openg2p/openg2p-pbms-celery
       tag: 0.0.0-develop
+    envVars: *registryAdapterEnv
+    envVarsFrom: *registryAdapterEnvFrom
   beatProducers:
     image:
       repository: openg2p/openg2p-pbms-celery
@@ -27,3 +81,5 @@ pbms:
     image:
       repository: openg2p/openg2p-pbms-staff-api
       tag: 0.0.0-develop
+    envVars: *registryAdapterEnv
+    envVarsFrom: *registryAdapterEnvFrom
