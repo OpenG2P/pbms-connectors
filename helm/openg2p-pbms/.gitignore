@@ -1,0 +1,4 @@
+Chart.lock
+*.tgz
+charts/
+questions.yaml

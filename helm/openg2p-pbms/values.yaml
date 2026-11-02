@@ -1,0 +1,29 @@
+# Values overlay for openg2p-pbms-platform.
+#
+# This chart has no templates. Install:
+#
+#     helm repo add openg2p https://openg2p.github.io/openg2p-helm
+#     helm dependency build ./helm/openg2p-pbms
+#     helm upgrade --install pbms ./helm/openg2p-pbms --namespace pbms --create-namespace
+#
+# Worker and beat share openg2p-pbms-celery. CELERY_APP on each deployment,
+# set by the platform chart, picks the process. The beneficiary API stays on
+# the platform image.
+
+pbms:
+  odoo:
+    image:
+      repository: openg2p/openg2p-pbms-odoo
+      tag: 0.0.0-develop
+  celeryWorkers:
+    image:
+      repository: openg2p/openg2p-pbms-celery
+      tag: 0.0.0-develop
+  beatProducers:
+    image:
+      repository: openg2p/openg2p-pbms-celery
+      tag: 0.0.0-develop
+  staffPortalApi:
+    image:
+      repository: openg2p/openg2p-pbms-staff-api
+      tag: 0.0.0-develop
