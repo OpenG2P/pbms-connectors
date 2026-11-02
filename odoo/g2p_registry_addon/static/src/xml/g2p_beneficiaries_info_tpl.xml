@@ -84,6 +84,21 @@
                                     <th class="px-2 py-1">Country</th>
                                 </t>
                             </t>
+                            <t t-if="state.target_registry === 'disability'">
+                                <th class="px-2 py-1">Internal ID</th>
+                                <th class="px-2 py-1">Functional ID</th>
+                                <th class="px-2 py-1">First Name</th>
+                                <th class="px-2 py-1">Last Name</th>
+                                <th class="px-2 py-1">Gender</th>
+                                <th class="px-2 py-1 text-center">Age</th>
+                                <th class="px-2 py-1">Status</th>
+                                <th class="px-2 py-1">Level</th>
+                                <th class="px-2 py-1">Support Needs</th>
+                                <th class="px-2 py-1 text-center">Unmet Needs</th>
+                                <th class="px-2 py-1">Employment</th>
+                                <th class="px-2 py-1">Housing</th>
+                                <th class="px-2 py-1">Country</th>
+                            </t>
                         </tr>
                     </thead>
                     <tbody>
@@ -131,6 +146,25 @@
                                             <td class="px-2 py-1"><t t-esc="record.country_code"/></td>
                                         </t>
                                     </t>
+                                    <t t-if="state.target_registry === 'disability'">
+                                        <td class="px-2 py-1 text-muted"><t t-esc="record.internal_record_id"/></td>
+                                        <td class="px-2 py-1 fw-semibold text-primary"><t t-esc="record.functional_record_id"/></td>
+                                        <td class="px-2 py-1"><t t-esc="record.first_name"/></td>
+                                        <td class="px-2 py-1"><t t-esc="record.last_name"/></td>
+                                        <td class="px-2 py-1"><t t-esc="record.gender"/></td>
+                                        <td class="px-2 py-1 text-center"><t t-esc="record.estimated_age"/></td>
+                                        <td class="px-2 py-1"><t t-esc="record.disability_status"/></td>
+                                        <td class="px-2 py-1"><t t-esc="record.disability_status_level"/></td>
+                                        <td class="px-2 py-1"><t t-esc="record.support_needs_level"/></td>
+                                        <td class="px-2 py-1 text-center">
+                                            <span t-attf-class="badge #{record.has_unmet_support_need ? 'bg-warning' : 'bg-secondary'}">
+                                                <t t-esc="record.unmet_support_needs_count || 0"/>
+                                            </span>
+                                        </td>
+                                        <td class="px-2 py-1"><t t-esc="record.employment_status"/></td>
+                                        <td class="px-2 py-1"><t t-esc="record.housing_type"/></td>
+                                        <td class="px-2 py-1"><t t-esc="record.country_code"/></td>
+                                    </t>
                                 </tr>
                             </t>
                         </t>
@@ -141,6 +175,10 @@
                                     No records found.
                                 </td>
                                 <td t-elif="state.target_registry === 'farmer'" colspan="10" class="text-center text-muted py-4">
+                                    <i class="fa fa-inbox fa-2x d-block mb-2"/>
+                                    No records found.
+                                </td>
+                                <td t-elif="state.target_registry === 'disability'" colspan="13" class="text-center text-muted py-4">
                                     <i class="fa fa-inbox fa-2x d-block mb-2"/>
                                     No records found.
                                 </td>

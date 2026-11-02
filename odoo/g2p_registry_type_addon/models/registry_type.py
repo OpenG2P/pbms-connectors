@@ -5,6 +5,7 @@ class G2PTargetModelMapping:
     MODEL_MAPPING = {
         "farmer": "g2p.register.farmers",
         "household": "g2p.register.households",
+        "disability": "g2p.register.persons_with_disability",
     }
 
     @classmethod
@@ -15,6 +16,7 @@ class G2PTargetModelMapping:
 class G2PRegistryType(Enum):
     FARMER = "farmer"
     HOUSEHOLD = "household"
+    DISABILITY = "disability"
 
     @classmethod
     def selection(cls):

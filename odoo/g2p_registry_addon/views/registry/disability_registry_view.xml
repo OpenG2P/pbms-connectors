@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_g2p_disability_registry" model="ir.actions.act_window">
+        <field name="name">Disability Registry</field>
+        <field name="res_model">g2p.register.persons_with_disability</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record id="view_g2p_disability_registry_form" model="ir.ui.view">
+        <field name="name">g2p.register.persons_with_disability.form</field>
+        <field name="model">g2p.register.persons_with_disability</field>
+        <field name="arch" type="xml">
+            <form string="G2P Disability Registry" create="0">
+                <sheet>
+                    <group string="Identity">
+                        <field name="internal_record_id"/>
+                        <field name="functional_record_id"/>
+                        <field name="record_name"/>
+                        <field name="record_status"/>
+                        <field name="record_status_reason"/>
+                        <field name="foundational_id"/>
+                        <field name="foundational_id_masked"/>
+                        <field name="disability_certificate_number"/>
+                        <field name="registration_date"/>
+                        <field name="registration_channel"/>
+                    </group>
+                    <group string="Person">
+                        <field name="full_name"/>
+                        <field name="first_name"/>
+                        <field name="middle_name"/>
+                        <field name="last_name"/>
+                        <field name="gender"/>
+                        <field name="birth_date"/>
+                        <field name="death_date"/>
+                        <field name="estimated_age"/>
+                        <field name="marital_status"/>
+                        <field name="employment_status"/>
+                        <field name="occupation"/>
+                        <field name="income_level"/>
+                        <field name="education_level"/>
+                    </group>
+                    <group string="Disability">
+                        <field name="self_id_disability"/>
+                        <field name="disability_status"/>
+                        <field name="disability_status_level"/>
+                        <field name="support_needs_level"/>
+                        <field name="assessment_date"/>
+                        <field name="assessment_authority"/>
+                        <field name="certificate_issue_date"/>
+                        <field name="certificate_expiry_date"/>
+                        <field name="next_reassessment_date"/>
+                        <field name="unmet_support_needs_count"/>
+                        <field name="has_unmet_support_need"/>
+                    </group>
+                    <group string="Living Situation">
+                        <field name="transport_requirement"/>
+                        <field name="housing_type"/>
+                        <field name="lives_alone"/>
+                        <field name="legal_capacity_status"/>
+                        <field name="guardian_required"/>
+                        <field name="preferred_contact_method"/>
+                    </group>
+                    <group string="Geo">
+                        <field name="latitude"/>
+                        <field name="longitude"/>
+                        <field name="address_line_1"/>
+                        <field name="address_line_2"/>
+                        <field name="postal_code"/>
+                        <field name="country_code"/>
+                        <field name="geo_lowest_level_value_id"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_g2p_disability_registry_tree" model="ir.ui.view">
+        <field name="name">g2p.register.persons_with_disability.tree</field>
+        <field name="model">g2p.register.persons_with_disability</field>
+        <field name="arch" type="xml">
+            <tree string="G2P Disability Registry" create="0">
+                <field name="internal_record_id"/>
+                <field name="functional_record_id"/>
+                <field name="first_name"/>
+                <field name="last_name"/>
+                <field name="gender"/>
+                <field name="birth_date"/>
+                <field name="disability_status"/>
+                <field name="disability_status_level"/>
+                <field name="support_needs_level"/>
+                <field name="has_unmet_support_need"/>
+                <button name="action_open_view" type="object" class="fa fa-eye" title="View"/>
+            </tree>
+        </field>
+    </record>
+</odoo>
