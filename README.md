@@ -11,9 +11,39 @@ publishes the images and chart that a cluster runs.
 | Path | Purpose |
 |---|---|
 | `odoo/` | `pbms_theme_extension`, `g2p_registry_type_addon`, `g2p_registry_addon` |
-| `extensions/registry-adapters/` | Registry factory with FarmerDB, FarmerDCI, HouseholdDB, HouseholdDCI. `REGISTRY_ADAPTERS_CONNECTOR=db\|dci` selects the transport |
+| `extensions/registry-adapters/` | Registry factory with a DB and a DCI computation per register (farmer, household, disability). Each register picks its transport with `REGISTRY_ADAPTERS_<REGISTER>_CONNECTOR=db\|dci` and `REGISTRY_ADAPTERS_<REGISTER>_CONNECTION_STRING` |
 | `docker/` | Thin Dockerfiles (`FROM openg2p/openg2p-pbms-*-base`) for `openg2p-pbms-odoo`, `openg2p-pbms-celery`, `openg2p-pbms-staff-api` |
 | `helm/openg2p-pbms/` | The chart you install. No templates: pins `openg2p-pbms-platform` and sets the three images |
+
+## Registers
+
+Each register has a connector and a connection string, set in the chart under
+`global.registers.<register>` (Rancher shows one group per register):
+
+| Connector | Connection string |
+|---|---|
+| `db` | `postgresql://user:pass@host:5432/dbname` (percent-encode the password) |
+| `dci` | The full search URL: `http(s)://host[:port]/dci/sync/search?reg_type=..&reg_record_type=..&timeout=30&ssl_verify=true` (query params optional) |
+
+An empty connection string leaves the register unconfigured; only programs on
+that register fail.
+
+### Adding a register
+
+1. Add the value to `G2PRegistryType` in both
+   `extensions/registry-adapters/.../models/enum.py` and
+   `odoo/g2p_registry_type_addon/models/registry_type.py`.
+2. Add `computations/<register>.py` with two small classes on top of
+   `RegistryDB` (set `model`, `payload`) and `RegistryDCI` (set `payload`,
+   `reg_type`, `reg_record_type`, `match_field`, `fields`, `flat()`); see
+   `computations/farmer.py`. Add its summaries mixin in `computations/_summary.py`
+   and the `(DB, DCI)` pair in `registers.py`.
+3. Add `global.registers.<register>` and its two `REGISTRY_ADAPTERS_*` lines in
+   `helm/openg2p-pbms/values.yaml`.
+4. Copy a register block in `helm/openg2p-pbms/questions.own.yaml`.
+5. Add the Odoo model in `odoo/g2p_registry_addon`.
+
+`test/test_register_config.py` fails CI if steps 1 to 4 disagree.
 
 ## Platform pin
 
