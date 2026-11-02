@@ -1,58 +1,34 @@
-from typing import Literal
+from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from .connection import RegistryConnection
 
-class RegistryAdapterSettings(BaseSettings):
-    """Registry transport settings. Read by the factory and the computations.
 
-    Env prefix is ``registry_adapters_``. Celery workers and the staff portal
-    set the same variables; they do not open a registry database themselves.
+class RegisterSettings(BaseSettings):
+    """Connector and connection string of one register.
+
+    Built per register with ``_env_prefix=f"registry_adapters_{register}_"``,
+    so each register reads REGISTRY_ADAPTERS_<REGISTER>_CONNECTOR and
+    REGISTRY_ADAPTERS_<REGISTER>_CONNECTION_STRING. Celery workers and the
+    staff portal set the same variables.
     """
 
-    model_config = SettingsConfigDict(
-        env_prefix="registry_adapters_",
-        env_file=".env",
-        extra="ignore",
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    connector: str = ""
+    connection_string: str = ""
+
+
+@lru_cache
+def get_connection(
+    register: str, reg_type: str = "", reg_record_type: str = ""
+) -> RegistryConnection:
+    settings = RegisterSettings(_env_prefix=f"registry_adapters_{register}_")
+    return RegistryConnection.parse(
+        register,
+        settings.connector,
+        settings.connection_string,
+        reg_type,
+        reg_record_type,
     )
-
-    connector: Literal["db", "dci"] = "db"
-
-    db_driver: str = "postgresql"
-    db_username: str = "postgres"
-    db_password: str = "postgres"
-    db_hostname: str = "localhost"
-    db_port: int = 5432
-    db_dbname: str = "socialregistrydb"
-
-    partner_api_url: str = "http://localhost:8000"
-    partner_api_timeout: int = 30
-    partner_api_ssl_verify: bool = True
-    farmer_reg_type: str = "Farmer"
-    household_reg_type: str = "Household"
-    farmer_reg_record_type: str = "Farmer"
-    household_reg_record_type: str = "Household"
-    disability_reg_type: str = "PersonWithDisability"
-    disability_reg_record_type: str = "spdci-extensions-dci:PersonwithDisability"
-
-    @classmethod
-    def get_config(cls) -> "RegistryAdapterSettings":
-        return cls()
-
-    def sync_url(self) -> str:
-        driver = self.db_driver
-        if driver.endswith("+asyncpg"):
-            driver = driver.replace("+asyncpg", "")
-        return self._url(driver)
-
-    def async_url(self) -> str:
-        driver = self.db_driver
-        if not driver.endswith("+asyncpg"):
-            driver = f"{driver.split('+', 1)[0]}+asyncpg"
-        return self._url(driver)
-
-    def _url(self, driver: str) -> str:
-        return (
-            f"{driver}://{self.db_username}:{self.db_password}"
-            f"@{self.db_hostname}:{self.db_port}/{self.db_dbname}"
-        )

@@ -1,4 +1,8 @@
-"""Shared DB and DCI transport used by the four computation classes."""
+"""Shared DB and DCI transport used by the computation classes.
+
+Every function takes the register's RegistryConnection, so each register can
+use its own database or partner API.
+"""
 
 from typing import Callable, Iterator, Optional
 
@@ -8,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select as async_select
 
 from .. import dci
+from ..connection import RegistryConnection
 from ..domain import dci_expression, sqlalchemy_clause
 from ..engine import async_session, sync_session
 
@@ -15,15 +20,19 @@ _PAGE = 500
 
 
 def iter_eligible_db(
-    model, rules: list[tuple[str, str]], batch_size: int
+    connection: RegistryConnection,
+    model,
+    rules: list[tuple[str, str]],
+    batch_size: int,
 ) -> Iterator[list[str]]:
     statement = _combine_db(model, rules, allowed=None)
     if statement is None:
         return
-    yield from _stream(statement, batch_size)
+    yield from _stream(connection, statement, batch_size)
 
 
 def iter_priority_db(
+    connection: RegistryConnection,
     model,
     priority_domains: list[str],
     enrolled_ids: list[str],
@@ -44,10 +53,11 @@ def iter_priority_db(
         statement = _combine_db(model, fallback_rules, allowed=None)
     if statement is None:
         return
-    yield from _stream(statement, batch_size)
+    yield from _stream(connection, statement, batch_size)
 
 
 def multipliers_db(
+    connection: RegistryConnection,
     model,
     registrant_ids: list[str],
     pbms_domain: str,
@@ -73,7 +83,7 @@ def multipliers_db(
     if clause is not None:
         statement = statement.where(clause)
     found: dict[str, float] = {}
-    with sync_session() as session:
+    with sync_session(connection) as session:
         for row in session.execute(statement):
             registrant_id = str(row[0])
             if not use_field or row[1] is None:
@@ -84,6 +94,7 @@ def multipliers_db(
 
 
 async def search_db(
+    connection: RegistryConnection,
     model,
     bg_task_session: AsyncSession,
     beneficiary_list_id: str,
@@ -104,7 +115,7 @@ async def search_db(
     field_name, descending = _order(order_by)
     column = getattr(model, field_name, id_column)
     statement = statement.order_by(column.desc() if descending else column.asc())
-    async with async_session() as session:
+    async with async_session(connection) as session:
         count = await session.scalar(
             select(func.count()).select_from(statement.subquery())
         )
@@ -116,10 +127,10 @@ async def search_db(
     return [to_payload(row) for row in rows], int(count or 0)
 
 
-def fetch_db(model, registrant_ids: list[str]):
+def fetch_db(connection: RegistryConnection, model, registrant_ids: list[str]):
     if not registrant_ids:
         return []
-    with sync_session() as session:
+    with sync_session(connection) as session:
         rows = session.query(model).filter(
             model.internal_record_id.in_([str(item) for item in registrant_ids])
         )
@@ -127,53 +138,44 @@ def fetch_db(model, registrant_ids: list[str]):
 
 
 def iter_eligible_dci(
+    connection: RegistryConnection,
     rules: list[tuple[str, str]],
     batch_size: int,
     allowed: set[str],
     match_all_field: str,
-    reg_type: str,
-    reg_record_type: str,
     id_of: Callable[[dict], str],
 ) -> Iterator[list[str]]:
-    ids = _combine_dci(
-        rules, allowed, match_all_field, reg_type, reg_record_type, id_of
-    )
+    ids = _combine_dci(connection, rules, allowed, match_all_field, id_of)
     yield from _batches(ids, batch_size)
 
 
 def iter_priority_dci(
+    connection: RegistryConnection,
     priority_domains: list[str],
     enrolled_ids: list[str],
     fallback_rules: list[tuple[str, str]],
     batch_size: int,
     allowed: set[str],
     match_all_field: str,
-    reg_type: str,
-    reg_record_type: str,
     id_of: Callable[[dict], str],
 ) -> Iterator[list[str]]:
     if priority_domains:
         rules = [(domain, "INTERSECT") for domain in priority_domains]
-        ids = _combine_dci(
-            rules, allowed, match_all_field, reg_type, reg_record_type, id_of
-        )
+        ids = _combine_dci(connection, rules, allowed, match_all_field, id_of)
         enrolled = {str(item) for item in enrolled_ids}
         ids = [item for item in ids if item in enrolled]
     else:
-        ids = _combine_dci(
-            fallback_rules, allowed, match_all_field, reg_type, reg_record_type, id_of
-        )
+        ids = _combine_dci(connection, fallback_rules, allowed, match_all_field, id_of)
     yield from _batches(ids, batch_size)
 
 
 def multipliers_dci(
+    connection: RegistryConnection,
     registrant_ids: list[str],
     pbms_domain: str,
     multiplier_field: Optional[str],
     allowed: set[str],
     match_all_field: str,
-    reg_type: str,
-    reg_record_type: str,
     id_of: Callable[[dict], str],
     flat_of: Callable[[dict], dict],
 ) -> dict[str, float]:
@@ -189,7 +191,7 @@ def multipliers_dci(
     expression = dci_expression(pbms_domain, allowed, match_all_field)
     expression = {"$and": [expression, {match_all_field: {"$in": list(wanted)}}]}
     found: dict[str, float] = {}
-    for record in _pages(expression, reg_type, reg_record_type):
+    for record in _pages(connection, expression):
         registrant_id = id_of(record)
         if registrant_id not in wanted:
             continue
@@ -202,11 +204,10 @@ def multipliers_dci(
 
 
 def fetch_dci(
+    connection: RegistryConnection,
     registrant_ids: list[str],
     allowed: set[str],
     match_all_field: str,
-    reg_type: str,
-    reg_record_type: str,
     id_of: Callable[[dict], str],
     to_row: Callable[[dict], object],
 ):
@@ -215,21 +216,20 @@ def fetch_dci(
     wanted = [str(item) for item in registrant_ids]
     expression = {match_all_field: {"$in": wanted}}
     rows = []
-    for record in _pages(expression, reg_type, reg_record_type):
+    for record in _pages(connection, expression):
         if id_of(record) in set(wanted):
             rows.append(to_row(record))
     return rows
 
 
 def search_dci(
+    connection: RegistryConnection,
     registrant_ids: list[str],
     search_domain: Optional[str],
     page: int,
     page_size: int,
     allowed: set[str],
     match_all_field: str,
-    reg_type: str,
-    reg_record_type: str,
     id_of: Callable[[dict], str],
     to_payload: Callable,
 ):
@@ -239,7 +239,7 @@ def search_dci(
     if search_domain and search_domain.strip() and search_domain.strip() != "[]":
         parts.append(dci_expression(search_domain, allowed, match_all_field))
     expression = parts[0] if len(parts) == 1 else {"$and": parts}
-    records, total = dci.search(expression, reg_type, reg_record_type, page, page_size)
+    records, total = dci.search(connection, expression, page, page_size)
     return [to_payload(record) for record in records if id_of(record)], total
 
 
@@ -264,8 +264,10 @@ def _combine_db(model, rules, allowed):
     return statement
 
 
-def _stream(statement, batch_size: int) -> Iterator[list[str]]:
-    with sync_session() as session:
+def _stream(
+    connection: RegistryConnection, statement, batch_size: int
+) -> Iterator[list[str]]:
+    with sync_session(connection) as session:
         result = session.execute(statement)
         while True:
             rows = result.fetchmany(batch_size)
@@ -274,16 +276,12 @@ def _stream(statement, batch_size: int) -> Iterator[list[str]]:
             yield [str(row[0]) for row in rows if row[0] is not None]
 
 
-def _combine_dci(
-    rules, allowed, match_all_field, reg_type, reg_record_type, id_of
-) -> list[str]:
+def _combine_dci(connection, rules, allowed, match_all_field, id_of) -> list[str]:
     combined: Optional[set[str]] = None
     for domain, operator in rules:
         expression = dci_expression(domain, allowed, match_all_field)
         found = {
-            id_of(record)
-            for record in _pages(expression, reg_type, reg_record_type)
-            if id_of(record)
+            id_of(record) for record in _pages(connection, expression) if id_of(record)
         }
         if combined is None:
             combined = found
@@ -298,11 +296,11 @@ def _combine_dci(
     return sorted(combined or [])
 
 
-def _pages(expression, reg_type, reg_record_type):
+def _pages(connection, expression):
     page = 1
     seen = 0
     while True:
-        records, total = dci.search(expression, reg_type, reg_record_type, page, _PAGE)
+        records, total = dci.search(connection, expression, page, _PAGE)
         if not records:
             break
         yield from records

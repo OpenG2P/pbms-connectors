@@ -1,4 +1,4 @@
-"""Partner API client for POST /dci/sync/search."""
+"""DCI sync search client. POSTs to the register's search_url."""
 
 import json
 import ssl
@@ -8,7 +8,7 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from .config import RegistryAdapterSettings
+from .connection import RegistryConnection
 
 
 class DciError(RuntimeError):
@@ -16,28 +16,31 @@ class DciError(RuntimeError):
 
 
 def search(
+    connection: RegistryConnection,
     expression: dict,
-    reg_type: str,
-    reg_record_type: str,
     page: int = 1,
     page_size: int = 200,
 ) -> tuple[list[dict], int]:
-    settings = RegistryAdapterSettings.get_config()
-    body = _envelope(expression, reg_type, reg_record_type, page, page_size)
-    url = settings.partner_api_url.rstrip("/") + "/dci/sync/search"
+    body = _envelope(
+        expression,
+        connection.reg_type,
+        connection.reg_record_type,
+        page,
+        page_size,
+    )
     request = Request(
-        url,
+        connection.search_url,
         data=json.dumps(body).encode(),
         headers={"Content-Type": "application/json"},
         method="POST",
     )
     context = (
-        None if settings.partner_api_ssl_verify else ssl._create_unverified_context()
+        None if connection.partner_api_ssl_verify else ssl._create_unverified_context()
     )
     try:
         with urlopen(
             request,
-            timeout=settings.partner_api_timeout,
+            timeout=connection.partner_api_timeout,
             context=context,
         ) as response:
             payload = json.loads(response.read().decode())
