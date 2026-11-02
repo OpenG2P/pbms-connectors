@@ -2,118 +2,63 @@
 # be inherited. Appended verbatim to the generated questions.yaml at package time
 # by openg2p/packaging ci/chart/inherit-questions.sh — variables here address the
 # ROOT chart and are NOT path-prefixed.
+#
+# One block per register, identical apart from the register name. A new
+# register copies a block (test/test_register_config.py checks every register
+# has one). Connection string formats:
+#   db:  postgresql://user:pass@host:5432/dbname (percent-encode the password)
+#   dci: full search URL, http(s)://host[:port]/dci/sync/search?reg_type=..&reg_record_type=..&timeout=30&ssl_verify=true
 
-# Registry settings
-- variable: global.registryConnector
-  description: How PBMS reads the registry. db queries the registry database. dci calls the registry partner API POST /dci/sync/search.
+# Farmer register
+- variable: global.registers.farmer.connector
+  description: How PBMS reads the farmer register. db queries the registry database. dci POSTs a DCI search to the URL in the connection string.
   type: enum
   options:
     - db
     - dci
   default: db
-  label: Registry Connector
-  group: Registry
+  label: Farmer Register Connector
+  group: Farmer Register
 
-- variable: global.registryDB
-  description: Name of the Registry DB in PostgreSQL. Used when the connector is db.
-  type: string
-  default: registry
-  label: Registry DB
-  group: Registry
-  show_if: "global.registryConnector=db"
+- variable: global.registers.farmer.connectionString
+  description: "db: postgresql://user:pass@host:5432/dbname. dci: the full search URL, http(s)://partner-api-host/dci/sync/search?reg_type=Farmer&reg_record_type=Farmer&timeout=30&ssl_verify=true (query params optional). Leave empty if no program uses this register."
+  type: password
+  default: 'postgresql://registry_user:CHANGE_ME@{{ .Values.global.postgresqlHost }}:5432/registry'
+  label: Farmer Register Connection String
+  group: Farmer Register
 
-- variable: global.registryDBUser
-  description: Name of the Registry DB User in PostgreSQL. Used when the connector is db.
-  type: string
-  default: registry_user
-  label: Registry DB User
-  group: Registry
-  show_if: "global.registryConnector=db"
+# Household register
+- variable: global.registers.household.connector
+  description: How PBMS reads the household register. db queries the registry database. dci POSTs a DCI search to the URL in the connection string.
+  type: enum
+  options:
+    - db
+    - dci
+  default: db
+  label: Household Register Connector
+  group: Household Register
 
-- variable: global.registryDBSecret
-  description: Name of the Registry DB Secret that contains the user password. Used when the connector is db.
-  type: string
-  default: registry
-  label: Registry DB Secret with User Password
-  group: Registry
-  show_if: "global.registryConnector=db"
+- variable: global.registers.household.connectionString
+  description: "db: postgresql://user:pass@host:5432/dbname. dci: the full search URL, http(s)://partner-api-host/dci/sync/search?reg_type=Household&reg_record_type=Household&timeout=30&ssl_verify=true (query params optional). Leave empty if no program uses this register."
+  type: password
+  default: 'postgresql://registry_user:CHANGE_ME@{{ .Values.global.postgresqlHost }}:5432/registry'
+  label: Household Register Connection String
+  group: Household Register
 
-- variable: global.registryDBUserPasswordKey
-  description: Key inside the Registry DB Secret that contains the user password. Used when the connector is db.
-  type: string
-  default: registry-db-user
-  label: Registry DB Secret Key with User Password
-  group: Registry
-  show_if: "global.registryConnector=db"
+# Disability register
+- variable: global.registers.disability.connector
+  description: How PBMS reads the disability register. db queries the registry database. dci POSTs a DCI search to the URL in the connection string.
+  type: enum
+  options:
+    - db
+    - dci
+  default: db
+  label: Disability Register Connector
+  group: Disability Register
 
-- variable: global.registryPartnerApiUrl
-  description: Origin of the registry partner API, with no path. PBMS calls {url}/dci/sync/search. Used when the connector is dci.
-  type: string
-  default: http://registry-partner-api
-  label: Registry Partner API URL
-  group: Registry
-  show_if: "global.registryConnector=dci"
-
-- variable: global.registryPartnerApiTimeout
-  description: Seconds to wait for one registry partner API call. Used when the connector is dci.
-  type: int
-  default: 30
-  label: Registry Partner API Timeout
-  group: Registry
-  show_if: "global.registryConnector=dci"
-
-- variable: global.registryPartnerApiSslVerify
-  description: Verify the registry partner API TLS certificate. Used when the connector is dci.
-  type: boolean
-  default: true
-  label: Registry Partner API TLS Verify
-  group: Registry
-  show_if: "global.registryConnector=dci"
-
-- variable: global.farmerRegType
-  description: DCI search reg_type for farmers. Must match the register mnemonic on the registry.
-  type: string
-  default: Farmer
-  label: Farmer Register Type
-  group: Registry
-  show_if: "global.registryConnector=dci"
-
-- variable: global.farmerRegRecordType
-  description: DCI reg_record_type sent with a farmer search.
-  type: string
-  default: Farmer
-  label: Farmer Record Type
-  group: Registry
-  show_if: "global.registryConnector=dci"
-
-- variable: global.householdRegType
-  description: DCI search reg_type for households. Must match the register mnemonic on the registry.
-  type: string
-  default: Household
-  label: Household Register Type
-  group: Registry
-  show_if: "global.registryConnector=dci"
-
-- variable: global.householdRegRecordType
-  description: DCI reg_record_type sent with a household search.
-  type: string
-  default: Household
-  label: Household Record Type
-  group: Registry
-  show_if: "global.registryConnector=dci"
-
-- variable: global.disabilityRegType
-  description: DCI search reg_type for persons with disability. Must match the register mnemonic on the disability registry.
-  type: string
-  default: PersonWithDisability
-  label: Disability Register Type
-  group: Registry
-  show_if: "global.registryConnector=dci"
-
-- variable: global.disabilityRegRecordType
-  description: DCI reg_record_type sent with a disability search.
-  type: string
-  default: spdci-extensions-dci:PersonwithDisability
-  label: Disability Record Type
-  group: Registry
-  show_if: "global.registryConnector=dci"
+- variable: global.registers.disability.connectionString
+  description: "db: postgresql://user:pass@host:5432/dbname. dci: the full search URL, http(s)://partner-api-host/dci/sync/search?reg_type=PersonWithDisability&reg_record_type=spdci-extensions-dci:PersonwithDisability&timeout=30&ssl_verify=true (query params optional). Leave empty if no program uses this register."
+  type: password
+  default: 'postgresql://registry_user:CHANGE_ME@{{ .Values.global.postgresqlHost }}:5432/registry'
+  label: Disability Register Connection String
+  group: Disability Register
