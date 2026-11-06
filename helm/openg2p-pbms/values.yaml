@@ -17,7 +17,7 @@
 # Each register has a connector and a connection string; the adapters decode
 # the string according to the connector:
 #   db:  postgresql://user:pass@host:5432/dbname (percent-encode the password)
-#   dci: full search URL, http(s)://host[:port]/dci/sync/search?reg_type=..&reg_record_type=..&timeout=30&ssl_verify=true
+#   dci: full search URL, http(s)://host[:port]/dci/registry/sync/search?reg_type=..&reg_record_type=..&timeout=30&ssl_verify=true
 #        (all query params optional; reg_type/reg_record_type default per register)
 # An empty connection string leaves the register unconfigured.
 # A new register needs an entry here, two env lines in registryAdapterEnv and a

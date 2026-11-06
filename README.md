@@ -23,7 +23,7 @@ Each register has a connector and a connection string, set in the chart under
 | Connector | Connection string |
 |---|---|
 | `db` | `postgresql://user:pass@host:5432/dbname` (percent-encode the password) |
-| `dci` | The full search URL: `http(s)://host[:port]/dci/sync/search?reg_type=..&reg_record_type=..&timeout=30&ssl_verify=true` (query params optional) |
+| `dci` | The full search URL: `http(s)://host[:port]/dci/registry/sync/search?reg_type=..&reg_record_type=..&timeout=30&ssl_verify=true` (query params optional) |
 
 An empty connection string leaves the register unconfigured; only programs on
 that register fail.

@@ -153,12 +153,12 @@ def test_dci_url_without_params_uses_register_defaults():
     conn = parse(
         "disability",
         "DCI",
-        "http://disability-registry-partner-api/dci/sync/search/",
+        "http://disability-registry-partner-api/dci/registry/sync/search/",
         "PersonWithDisability",
         "spdci-extensions-dci:PersonwithDisability",
     )
     assert conn.connector == "dci"
-    assert conn.search_url == "http://disability-registry-partner-api/dci/sync/search"
+    assert conn.search_url == "http://disability-registry-partner-api/dci/registry/sync/search"
     assert conn.partner_api_timeout == 30
     assert conn.partner_api_ssl_verify is True
     assert conn.reg_type == "PersonWithDisability"
@@ -187,12 +187,12 @@ def test_dci_query_params_override():
         ("db", ""),
         ("db", "postgresql://u:p@pg/"),
         ("db", "not a url"),
-        ("dci", "ftp://api/dci/sync/search"),
+        ("dci", "ftp://api/dci/registry/sync/search"),
         ("dci", "http://api"),
         ("dci", "http://api/?timeout=5"),
-        ("dci", "http://api/dci/sync/search?regtype=Farmer"),
-        ("dci", "http://api/dci/sync/search?timeout=zero"),
-        ("dci", "http://api/dci/sync/search?ssl_verify=maybe"),
+        ("dci", "http://api/dci/registry/sync/search?regtype=Farmer"),
+        ("dci", "http://api/dci/registry/sync/search?timeout=zero"),
+        ("dci", "http://api/dci/registry/sync/search?ssl_verify=maybe"),
     ],
 )
 def test_invalid(connector, value):

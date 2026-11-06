@@ -7,7 +7,7 @@
 # register copies a block (test/test_register_config.py checks every register
 # has one). Connection string formats:
 #   db:  postgresql://user:pass@host:5432/dbname (percent-encode the password)
-#   dci: full search URL, http(s)://host[:port]/dci/sync/search?reg_type=..&reg_record_type=..&timeout=30&ssl_verify=true
+#   dci: full search URL, http(s)://host[:port]/dci/registry/sync/search?reg_type=..&reg_record_type=..&timeout=30&ssl_verify=true
 
 # Farmer register
 - variable: global.registers.farmer.connector
@@ -21,7 +21,7 @@
   group: Farmer Register
 
 - variable: global.registers.farmer.connectionString
-  description: "db: postgresql://user:pass@host:5432/dbname. dci: the full search URL, http(s)://partner-api-host/dci/sync/search?reg_type=Farmer&reg_record_type=Farmer&timeout=30&ssl_verify=true (query params optional). Leave empty if no program uses this register."
+  description: "db: postgresql://user:pass@host:5432/dbname. dci: the full search URL, http(s)://partner-api-host/dci/registry/sync/search?reg_type=Farmer&reg_record_type=Farmer&timeout=30&ssl_verify=true (query params optional). Leave empty if no program uses this register."
   type: password
   default: 'postgresql://registry_user:CHANGE_ME@{{ .Values.global.postgresqlHost }}:5432/registry'
   label: Farmer Register Connection String
@@ -39,7 +39,7 @@
   group: Household Register
 
 - variable: global.registers.household.connectionString
-  description: "db: postgresql://user:pass@host:5432/dbname. dci: the full search URL, http(s)://partner-api-host/dci/sync/search?reg_type=Household&reg_record_type=Household&timeout=30&ssl_verify=true (query params optional). Leave empty if no program uses this register."
+  description: "db: postgresql://user:pass@host:5432/dbname. dci: the full search URL, http(s)://partner-api-host/dci/registry/sync/search?reg_type=Household&reg_record_type=Household&timeout=30&ssl_verify=true (query params optional). Leave empty if no program uses this register."
   type: password
   default: 'postgresql://registry_user:CHANGE_ME@{{ .Values.global.postgresqlHost }}:5432/registry'
   label: Household Register Connection String
@@ -57,7 +57,7 @@
   group: Disability Register
 
 - variable: global.registers.disability.connectionString
-  description: "db: postgresql://user:pass@host:5432/dbname. dci: the full search URL, http(s)://partner-api-host/dci/sync/search?reg_type=PersonWithDisability&reg_record_type=spdci-extensions-dci:PersonwithDisability&timeout=30&ssl_verify=true (query params optional). Leave empty if no program uses this register."
+  description: "db: postgresql://user:pass@host:5432/dbname. dci: the full search URL, http(s)://partner-api-host/dci/registry/sync/search?reg_type=PersonWithDisability&reg_record_type=spdci-extensions-dci:PersonwithDisability&timeout=30&ssl_verify=true (query params optional). Leave empty if no program uses this register."
   type: password
   default: 'postgresql://registry_user:CHANGE_ME@{{ .Values.global.postgresqlHost }}:5432/registry'
   label: Disability Register Connection String
