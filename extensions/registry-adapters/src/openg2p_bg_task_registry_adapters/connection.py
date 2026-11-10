@@ -3,7 +3,7 @@
 db:  postgresql://user:pass@host:5432/dbname
 dci: http(s)://host[:port]/search/path?reg_type=..&reg_record_type=..&timeout=30&ssl_verify=true
      The URL without the query is the endpoint searched, e.g.
-     http://farmer-registry-partner-api/dci/sync/search.
+     http://farmer-registry-partner-api/dci/registry/sync/search.
 
 Standard library only, so it can be tested without the adapter dependencies.
 """
@@ -108,7 +108,7 @@ class RegistryConnection:
         if not path:
             raise RegistryConnectionError(
                 f"Register '{register}': dci connection string must be the full "
-                f"search URL, e.g. {parts.scheme}://{parts.netloc}/dci/sync/search."
+                f"search URL, e.g. {parts.scheme}://{parts.netloc}/dci/registry/sync/search."
             )
         return cls(
             register=register,
